@@ -1,0 +1,294 @@
+@import 'tailwindcss';
+
+/*
+ * Tokens do tema. A interface é quieta e quase monocromática (jacarandá, marfim,
+ * bronze); a cor fica reservada para as notas, uma por grau da escala.
+ * O canvas do piano roll lê estas mesmas variáveis (ver ui/pianoroll/palette.ts),
+ * então aqui só entram cores resolvidas, sem var() nem color-mix().
+ */
+:root {
+  color-scheme: dark;
+
+  --ground: #2a2024;
+  --panel: #382b31;
+  --raised: #47373e;
+  --line: #55434b;
+  --ink: #efe6d6;
+  --ink-dim: #baaba1;
+  --bronze: #c8a15a;
+  --bronze-ink: #2a2024;
+  --felt: #c2413b;
+  --felt-text: #ee8079;
+
+  --roll-in: #33272c;
+  --roll-out: #261d21;
+  --roll-tonic: #40312c;
+  --roll-line: #2a2024;
+  --roll-octave: #5d4a50;
+  --roll-bar: #7a646b;
+  --roll-beat: #5a474e;
+  --roll-sub: #45363c;
+  --roll-ruler: #2f2429;
+  --key-white: #efe6d6;
+  --key-white-edge: #cfc3b0;
+  --key-black: #1d1619;
+  --key-ink: #6d5a5e;
+
+  --deg-1: #e0b85c;
+  --deg-2: #e8926a;
+  --deg-3: #e37f93;
+  --deg-4: #b78cd6;
+  --deg-5: #74aee3;
+  --deg-6: #5fc4bc;
+  --deg-7: #93cc7c;
+  --deg-out: #8c7f84;
+  --note-ink: #2a2024;
+  --note-selected: #fff8ea;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --ground: #efe6d6;
+  --panel: #e5dac7;
+  --raised: #d9ccb6;
+  --line: #c6b69d;
+  --ink: #2a2024;
+  --ink-dim: #6a595e;
+  --bronze: #8a651c;
+  --bronze-ink: #fff8ea;
+  --felt: #b0342e;
+  --felt-text: #a12c27;
+
+  --roll-in: #f6f0e4;
+  --roll-out: #e3d8c4;
+  --roll-tonic: #f4e4bd;
+  --roll-line: #e9dfcd;
+  --roll-octave: #b3a188;
+  --roll-bar: #a8967d;
+  --roll-beat: #cbbda6;
+  --roll-sub: #ddd2bf;
+  --roll-ruler: #e9dfcc;
+  --key-white: #fffaf0;
+  --key-white-edge: #cdbfa8;
+  --key-black: #2a2024;
+  --key-ink: #7a686b;
+
+  --deg-1: #c0901f;
+  --deg-2: #d06f41;
+  --deg-3: #c9546f;
+  --deg-4: #9263b8;
+  --deg-5: #4383c2;
+  --deg-6: #2a9a91;
+  --deg-7: #5fa046;
+  --deg-out: #a2979a;
+  --note-ink: #fffaf0;
+  --note-selected: #2a2024;
+}
+
+@theme inline {
+  --color-ground: var(--ground);
+  --color-panel: var(--panel);
+  --color-raised: var(--raised);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-dim: var(--ink-dim);
+  --color-bronze: var(--bronze);
+  --color-bronze-ink: var(--bronze-ink);
+  --color-felt: var(--felt);
+  --color-felt-text: var(--felt-text);
+
+  --font-sans: 'Schibsted Grotesk Variable', system-ui, sans-serif;
+  --font-score: 'Newsreader Variable', Georgia, serif;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+  }
+
+  input,
+  textarea {
+    user-select: text;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: default;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--bronze);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--bronze);
+    color: var(--bronze-ink);
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
+  }
+}
+
+@layer components {
+  /* Botão de ícone das barras: quadrado, some no fundo até ser tocado. */
+  .tool {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 32px;
+    min-width: 32px;
+    padding: 0 7px;
+    border-radius: 6px;
+    color: var(--ink-dim);
+    transition:
+      background-color 120ms,
+      color 120ms;
+  }
+  .tool:hover:not(:disabled) {
+    background: var(--raised);
+    color: var(--ink);
+  }
+  .tool:disabled {
+    opacity: 0.35;
+  }
+  .tool[aria-pressed='true'] {
+    background: var(--raised);
+    color: var(--bronze);
+  }
+
+  /* Botão com texto. */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 30px;
+    padding: 0 12px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font-weight: 500;
+    transition:
+      background-color 120ms,
+      border-color 120ms;
+  }
+  .btn:hover:not(:disabled) {
+    background: var(--raised);
+  }
+  .btn:disabled {
+    opacity: 0.4;
+  }
+  .btn-primary {
+    background: var(--bronze);
+    border-color: var(--bronze);
+    color: var(--bronze-ink);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--bronze);
+    filter: brightness(1.08);
+  }
+
+  .field {
+    height: 30px;
+    padding: 0 9px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: var(--ground);
+    color: var(--ink);
+    min-width: 0;
+  }
+  .field::placeholder {
+    color: var(--ink-dim);
+    opacity: 0.8;
+  }
+  select.field {
+    padding-right: 4px;
+    cursor: pointer;
+  }
+
+  .divider {
+    width: 1px;
+    align-self: stretch;
+    margin: 8px 4px;
+    background: var(--line);
+  }
+
+  kbd {
+    display: inline-block;
+    min-width: 22px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+    border-bottom-width: 2px;
+    background: var(--ground);
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 500;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  input[type='range'] {
+    appearance: none;
+    height: 18px;
+    background: transparent;
+    cursor: pointer;
+  }
+  input[type='range']::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--line);
+  }
+  input[type='range']::-webkit-slider-thumb {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    margin-top: -5px;
+    border-radius: 50%;
+    background: var(--bronze);
+    border: 2px solid var(--panel);
+  }
+  input[type='range']::-moz-range-track {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--line);
+  }
+  input[type='range']::-moz-range-thumb {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--bronze);
+    border: 2px solid var(--panel);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
