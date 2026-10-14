@@ -1,7 +1,8 @@
 import { engine } from '../audio/engine'
 import { cloneNotesAt, moveNotes, notesEnd, removeNotes, resizeNotes } from '../music/notes'
-import { getScale, shiftDiatonic, snapToScale } from '../music/scale'
+import { getScale, shiftDiatonic, snapToScale, type ScaleInfo } from '../music/scale'
 import { GRID_TICKS, snapTick, ticksPerBar } from '../music/time'
+import type { Note } from '../music/types'
 import { useDoc } from './doc'
 import { useTransport } from './transport'
 import { ZOOM_X, ZOOM_Y, useView } from './view'
@@ -143,6 +144,22 @@ export function setSelectionVelocity(velocity: number): void {
   if (ids.size === 0) return
   const v = Math.min(1, Math.max(0.05, velocity))
   d.edit({ notes: d.melody.notes.map((n) => (ids.has(n.id) ? { ...n, velocity: v } : n)) }, { coalesce: 'velocity' })
+}
+
+/**
+ * Aplica uma transformação às notas selecionadas ou, sem seleção, à melodia inteira.
+ * A função recebe a escala atual só quando "grudar na escala" está ligado.
+ */
+export function applyTransform(fn: (notes: Note[], scale: ScaleInfo | null) => Note[], coalesce?: string): void {
+  const d = useDoc.getState()
+  const ids = new Set(d.selection)
+  const target = ids.size > 0 ? d.melody.notes.filter((n) => ids.has(n.id)) : d.melody.notes
+  if (target.length === 0) return
+  const scale = useView.getState().snapScale ? getScale(d.melody.key, d.melody.scale) : null
+  const out = fn(target, scale)
+  if (out === target) return
+  const byId = new Map(out.map((n) => [n.id, n]))
+  d.edit({ notes: d.melody.notes.map((n) => byId.get(n.id) ?? n) }, { coalesce })
 }
 
 // ---------------------------------------------------------------- visão

@@ -4,6 +4,7 @@ import { PPQ, type GridValue } from '../music/types'
 
 export type Tool = 'pencil' | 'select'
 export type Theme = 'dark' | 'light'
+export type ToolsTab = 'notes' | 'create' | 'harmony' | 'sound'
 
 export const ZOOM_X = { min: 24, max: 480, default: 96 } // pixels por semínima
 export const ZOOM_Y = { min: 10, max: 34, default: 18 } // pixels por semitom
@@ -22,6 +23,7 @@ type ViewState = {
   kbOctave: number
   libraryOpen: boolean
   toolsOpen: boolean
+  toolsTab: ToolsTab
   helpOpen: boolean
   set: (patch: Partial<Omit<ViewState, 'set'>>) => void
 }
@@ -40,6 +42,7 @@ export const useView = create<ViewState>()(
       kbOctave: 4,
       libraryOpen: true,
       toolsOpen: true,
+      toolsTab: 'notes',
       helpOpen: false,
       set: (patch) => set(patch),
     }),
