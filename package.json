@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test:visual": ".venv/bin/python .claude/skills/webapp-testing/scripts/with_server.py --server \"npm run dev\" --port 5173 -- .venv/bin/python tests/visual/run_all.py"
   },
   "dependencies": {
     "@fontsource-variable/newsreader": "^5.3.0",

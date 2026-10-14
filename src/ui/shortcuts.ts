@@ -46,7 +46,7 @@ export const SHORTCUT_GROUPS: { title: string; items: { keys: string[]; label: s
       { keys: ['2'], label: 'Seleção: arrastar marca várias notas' },
       { keys: ['Shift', 'arrastar'], label: 'Retângulo de seleção, mesmo com o lápis' },
       { keys: ['Alt', 'arrastar'], label: 'Arrastar uma cópia das notas' },
-      { keys: ['Ctrl', 'arrastar'], label: 'Mover livre, sem grudar na grade nem na escala' },
+      { keys: ['Ctrl', 'clicar ou arrastar'], label: 'Sair da escala: aceita qualquer semitom' },
       { keys: ['Botão direito'], label: 'Apagar a nota sob o mouse' },
       { keys: ['Ctrl', 'Z'], label: 'Desfazer' },
       { keys: ['Ctrl', 'Shift', 'Z'], label: 'Refazer' },

@@ -137,7 +137,7 @@ function drawGrid(ctx: CanvasRenderingContext2D, c: Coords, s: Scene, pal: Palet
       ctx.save()
       ctx.clip()
       ctx.strokeStyle = pal.rollOut
-      ctx.globalAlpha = 0.55
+      ctx.globalAlpha = 0.34
       ctx.lineWidth = 1.5
       ctx.beginPath()
       for (let hx = x - h; hx < x + w; hx += 6) {

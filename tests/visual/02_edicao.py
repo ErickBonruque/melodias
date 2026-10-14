@@ -79,6 +79,10 @@ with studio() as (page, errors):
     page.evaluate("window.__melodias.transport.getState().set({ cursor: 480 * 8 })")
     page.keyboard.press("Control+v")
     assert len(notes(page)) == 9
+    page.wait_for_timeout(500)  # a visão rola até o cursor; espera assentar antes de mirar na grade
+    pasted_x, _ = point(page, 3840, 60)
+    box = page.locator("canvas").bounding_box()
+    assert box["x"] + 72 <= pasted_x <= box["x"] + box["width"], "as notas coladas precisam continuar à vista"
     assert [n["start"] for n in notes(page)[-3:]] == [3840, 4320, 4800]
 
     # setas: sobe um grau (Dó Mi Sol → Ré Fá Lá), Shift+seta sobe uma oitava

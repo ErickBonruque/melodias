@@ -202,16 +202,18 @@ function Item({ melody, active, onTag }: { melody: Melody; active: boolean; onTa
 
       {confirming && (
         <div
-          className="absolute inset-0 flex items-center justify-center gap-2 bg-panel/95 px-3 text-[13px]"
+          className="absolute inset-0 flex flex-col items-center justify-center gap-2.5 bg-panel/95 text-[13px]"
           onClick={(e) => e.stopPropagation()}
         >
-          <span className="mr-1">Apagar de vez?</span>
-          <button className="btn h-7 border-felt bg-felt px-2.5 text-white" onClick={() => void deleteMelody(melody.id)}>
-            Apagar
-          </button>
-          <button className="btn h-7 px-2.5" onClick={() => setConfirming(false)}>
-            Manter
-          </button>
+          <span>Apagar “{melody.title || 'Sem título'}” de vez?</span>
+          <span className="flex gap-2">
+            <button className="btn h-7 border-felt bg-felt px-3 text-white" onClick={() => void deleteMelody(melody.id)}>
+              Apagar
+            </button>
+            <button className="btn h-7 px-3" onClick={() => setConfirming(false)}>
+              Manter
+            </button>
+          </span>
         </div>
       )}
     </li>

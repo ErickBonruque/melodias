@@ -62,6 +62,7 @@ type Drag =
   | { kind: 'rect'; t0: number; cy0: number; baseSel: string[]; downX: number; downY: number; moved: boolean }
   | { kind: 'erase' }
 
+/** `free`: Ctrl ou Cmd pressionado, que deixa a nota sair da escala. */
 type Pointer = { x: number; y: number; shift: boolean; free: boolean }
 
 const DRAG_THRESHOLD = 4
@@ -122,7 +123,13 @@ export class PianoRollController {
     this.cleanup.push(() => theme.disconnect())
 
     const markDirty = () => (this.dirty = true)
-    this.cleanup.push(useDoc.subscribe(markDirty))
+    this.cleanup.push(
+      useDoc.subscribe(() => {
+        this.dirty = true
+        // a nota sob o mouse pode ter mudado de nome ou de grau (troca de escala, desfazer)
+        if (this.pointer && !this.drag) this.updateHover(this.pointer)
+      }),
+    )
     this.cleanup.push(useTransport.subscribe(markDirty))
     this.cleanup.push(useView.subscribe((s) => this.onViewChange(s.pxPerBeat, s.rowH)))
     this.cleanup.push(engine.onLiveChange(markDirty))
@@ -273,7 +280,7 @@ export class PianoRollController {
       }
     }
     // tocando ou não, se o cursor andou (stop, colar, Home) a visão vai atrás dele
-    if (playhead !== this.lastPlayhead && !this.drag) this.followPlayhead(playhead)
+    if (playhead !== this.lastPlayhead && !this.drag) this.followPlayhead(playhead, t.playing)
     this.lastPlayhead = playhead
 
     const flashes = new Map<string, number>()
@@ -315,10 +322,16 @@ export class PianoRollController {
     draw(this.ctx, this.coords(), scene, this.pal)
   }
 
-  private followPlayhead(playhead: number): void {
+  /**
+   * Mantém o cursor à vista. Tocando, vira a página (o cursor volta para a esquerda).
+   * Parado, rola só o necessário, para não esconder o que acabou de ser colado.
+   */
+  private followPlayhead(playhead: number, playing: boolean): void {
     const c = this.coords()
     const x = c.xOfTick(playhead)
-    if (x > this.width - 48 || x < KEYS_W) this.targetX = playhead * c.pxPerTick - 48
+    const px = playhead * c.pxPerTick
+    if (x < KEYS_W) this.targetX = px - 48
+    else if (x > this.width - 48) this.targetX = playing ? px - 48 : px - c.gridW + 48
   }
 
   /** Arrastar perto da borda rola a grade. Devolve true se rolou. */
@@ -350,9 +363,8 @@ export class PianoRollController {
     return { x: e.clientX - box.left, y: e.clientY - box.top, shift: e.shiftKey, free: e.ctrlKey || e.metaKey }
   }
 
-  private snapStart(tick: number, free: boolean, mode: 'round' | 'floor' = 'round'): number {
-    const v = useView.getState()
-    const t = v.snapGrid && !free ? snapTick(tick, this.gridStep(), mode) : Math.round(tick)
+  private snapStart(tick: number, mode: 'round' | 'floor' = 'round'): number {
+    const t = useView.getState().snapGrid ? snapTick(tick, this.gridStep(), mode) : Math.round(tick)
     return Math.max(0, t)
   }
 
@@ -489,7 +501,7 @@ export class PianoRollController {
     // lápis em área vazia: cria a nota e, se continuar arrastando, estica a duração
     const note = createNote({
       pitch: this.snapPitch(pitch, p.free),
-      start: this.snapStart(tick, p.free, 'floor'),
+      start: this.snapStart(tick, 'floor'),
       duration: view.lastDuration,
     })
     doc.beginGesture()
@@ -541,15 +553,15 @@ export class PianoRollController {
       case 'ruler': {
         if (!drag.moved && Math.abs(p.x - drag.downX) < DRAG_THRESHOLD) return
         drag.moved = true
-        const a = this.snapStart(drag.downTick, p.free)
-        const b = this.snapStart(c.tickOfX(p.x), p.free)
+        const a = this.snapStart(drag.downTick)
+        const b = this.snapStart(c.tickOfX(p.x))
         if (a !== b) useTransport.getState().set({ loop: { on: true, start: Math.min(a, b), end: Math.max(a, b) } })
         return
       }
 
       case 'loop-edge': {
         const t = useTransport.getState()
-        const tick = this.snapStart(c.tickOfX(p.x), p.free)
+        const tick = this.snapStart(c.tickOfX(p.x))
         const min = this.gridStep()
         const loop: LoopRegion =
           drag.edge === 'start'
@@ -562,7 +574,7 @@ export class PianoRollController {
       case 'move': {
         const tick = c.tickOfX(p.x)
         const rows = c.pitchOfY(p.y) - drag.downPitch
-        const target = this.snapStart(drag.anchor.start + (tick - drag.downTick), p.free)
+        const target = this.snapStart(drag.anchor.start + (tick - drag.downTick))
         const dTick = target - drag.anchor.start
 
         let mapPitch = (pitch: number) => pitch + rows
@@ -592,8 +604,8 @@ export class PianoRollController {
         if (!drag.moved && Math.abs(p.x - drag.downX) < DRAG_THRESHOLD) return
         drag.moved = true
         const delta = c.tickOfX(p.x) - drag.downTick
-        const step = view.snapGrid && !p.free ? this.gridStep() : 1
-        const min = view.snapGrid && !p.free ? step : 30
+        const step = view.snapGrid ? this.gridStep() : 1
+        const min = view.snapGrid ? step : 30
         let dTick: number
         if (drag.creating) {
           // nota recém-criada: o fim acompanha o ponteiro
@@ -639,10 +651,10 @@ export class PianoRollController {
 
     switch (drag.kind) {
       case 'keys':
-        this.playKey(null)
+        this.releaseKey(drag.pitch)
         break
       case 'ruler':
-        if (!drag.moved) seek(this.snapStart(drag.downTick, p.free))
+        if (!drag.moved) seek(this.snapStart(drag.downTick))
         break
       case 'move':
         doc.commitGesture()
@@ -667,7 +679,7 @@ export class PianoRollController {
   private cancelDrag(): void {
     const drag = this.drag
     if (!drag) return
-    if (drag.kind === 'keys') this.playKey(null)
+    if (drag.kind === 'keys') this.releaseKey(drag.pitch)
     if (drag.kind === 'move' || drag.kind === 'resize' || drag.kind === 'erase') useDoc.getState().cancelGesture()
     this.drag = null
     this.rect = null
@@ -704,7 +716,7 @@ export class PianoRollController {
       } else if (pitch >= MIN_PITCH && pitch <= MAX_PITCH) {
         if (view.tool === 'pencil' && !p.shift) {
           ghost = {
-            tick: this.snapStart(tick, p.free, 'floor'),
+            tick: this.snapStart(tick, 'floor'),
             pitch: this.snapPitch(pitch, p.free),
             duration: view.lastDuration,
           }
@@ -755,6 +767,11 @@ export class PianoRollController {
     if (next != null) engine.noteOn(next)
     this.drag.pitch = next
     this.hoverKey = next
+    this.dirty = true
+  }
+
+  private releaseKey(pitch: number | null): void {
+    if (pitch != null) engine.noteOff(pitch)
     this.dirty = true
   }
 
