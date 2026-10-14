@@ -67,18 +67,26 @@ with sync_playwright() as p:
         page.evaluate(LOAD, m)
         page.wait_for_timeout(900)  # autosave grava na biblioteca
 
-    # 1. tema escuro, tocando: cursor, nota destacada e tecla acesa
-    center_on(page, 70)
-    page.mouse.click(700, 760)  # um clique fora das notas libera o áudio
+    # 1. tema escuro, tocando com acordes e partitura: cursor, tecla acesa, cifra e figura da vez
+    page.mouse.click(700, 500)  # um clique libera o áudio
     page.keyboard.press("Control+z")
     page.wait_for_function("window.__melodias.transport.getState().loadingInstrument === null", timeout=15000)
     page.keyboard.press("Escape")
-    page.mouse.move(1300, 780)
+    page.get_by_role("tab", name="Harmonia").click()
+    page.get_by_role("button", name="Sugerir acordes para a melodia").click()
+    page.get_by_role("button", name="Partitura").click()
+    page.wait_for_selector(".score svg .abcjs-note", timeout=15000)
+    center_on(page, 70)
+    page.mouse.move(1300, 500)
     page.keyboard.press("Space")
     page.wait_for_function("window.__melodias.engine.position() > 480 * 9.72", timeout=20000)
     page.screenshot(path=str(OUT / "estudio-escuro.png"))
     page.keyboard.press("Enter")
     page.keyboard.press("Enter")
+    page.get_by_role("button", name="Partitura").click()
+    page.get_by_role("button", name="Tirar os acordes").click()
+    page.get_by_role("tab", name="Notas").click()
+    center_on(page, 70)
     page.wait_for_timeout(300)
 
     # 2. tema claro, com um trecho selecionado
@@ -90,14 +98,16 @@ with sync_playwright() as p:
     page.evaluate("window.__melodias.doc.getState().select([])")
     page.get_by_label("Alternar tema claro e escuro").click()
 
-    # 3. outra escala: as linhas e as cores acompanham o modo
+    # 3. aba Criar: gerador de ideias, variações, gravar e cantarolar
     page.locator("aside[aria-label=Biblioteca] li", has_text="Baião torto").click()
     page.wait_for_timeout(400)
     center_on(page, 71)
+    page.get_by_role("tab", name="Criar").click()
     x = page.evaluate("window.__roll.pointFor(480 * 2.3, 77)")
     page.mouse.move(x["x"], x["y"])
     page.wait_for_timeout(300)
-    page.screenshot(path=str(OUT / "sol-mixolidio.png"))
+    page.screenshot(path=str(OUT / "criar.png"))
+    page.get_by_role("tab", name="Notas").click()
 
     # 4. atalhos
     page.keyboard.press("?")

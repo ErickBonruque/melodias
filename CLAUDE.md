@@ -8,7 +8,7 @@ Converse com o usuário em português. Textos da interface também em português
 
 ## Estado atual
 
-Fase 1 concluída: piano roll editável, snap na escala, teclado virtual, teclado do computador, Web MIDI, transport com loop e metrônomo, desfazer/refazer, atalhos e biblioteca com autosave. Próxima: Fase 2 (ferramentas de criação).
+Fases 1 e 2 concluídas. Além do piano roll, do transport e da biblioteca, já existem: transformações, gravar tocando, cantarolar (ao vivo e por transcrição), gerador de ideias e variações, acordes com acompanhamento, análise e partitura. Próxima: Fase 3 (exportar, compartilhar, extras).
 
 ## Stack
 
@@ -17,7 +17,8 @@ Fase 1 concluída: piano roll editável, snap na escala, teclado virtual, teclad
 - Tone.js: motor de áudio, transport, BPM, metrônomo, sintetizadores, `Tone.Sampler` para o piano.
 - tonal: teoria musical (notas, intervalos, escalas, modos, acordes).
 - Dexie (IndexedDB): biblioteca local de melodias.
-- Fases seguintes: @tonejs/midi, abcjs, pitchy, @spotify/basic-pitch (lazy), @magenta/music (opcional, Web Worker + lazy).
+- abcjs: partitura. pitchy: altura ao vivo pelo microfone. @spotify/basic-pitch (com TensorFlow.js): transcrição de áudio. abcjs e basic-pitch entram por `import()` dinâmico, só quando a pessoa abre a partitura ou transcreve.
+- Fase 3: @tonejs/midi; @magenta/music opcional (Web Worker + lazy).
 - Vitest para lógica musical. Playwright (Python, via skill `webapp-testing`) para conferência visual.
 - Gerenciador de pacotes: npm.
 
@@ -60,19 +61,26 @@ Ficam em `.claude/skills/` e valem para o projeto inteiro:
 ```
 src/
   music/   teoria e operações sobre notas: funções puras, sem React nem Tone
-           types (PPQ, Note, Melody), time (grade, snap, quantização), scale (escala, graus, nomes), notes
+           types, time (grade, quantização), scale (escala, graus, nomes), notes,
+           transform, generate (ideias e variações), chords (tríades, sugestão, acompanhamento),
+           analysis (tonalidade, intervalos), abc (partitura), pitchTrack (voz → notas)
   audio/   engine.ts: o único arquivo que importa o Tone.js
+           mic.ts (microfone + pitchy, contexto próprio só de análise), transcribe.ts (Basic Pitch, lazy)
   input/   teclado do computador (keyboard), Web MIDI (midi, midiMessage)
   store/   Zustand
-           doc (melodia, seleção, histórico), view (ferramenta, grade, zoom, tema; persiste em localStorage),
-           transport (tocando, cursor, loop, metrônomo), library (Dexie + autosave),
-           commands (ações que cruzam stores), bindAudio (estado → motor de áudio)
+           doc (melodia, seleção, histórico), view (preferências; persiste em localStorage),
+           transport (tocando, gravando, cursor, loop), library (Dexie + autosave), hum (microfone),
+           commands e ideas (ações que cruzam stores), recorder (notas ao vivo → melodia),
+           bindAudio (estado → motor de áudio)
   db/      Dexie
-  ui/      componentes React, styles.css (tokens), shortcuts.ts
+  ui/      componentes React, styles.css (tokens), shortcuts.ts, ScorePanel (abcjs)
     pianoroll/  coords (tick ↔ x, altura ↔ y), render (desenho), controller (gestos e laço de quadros), palette
+    tools/      abas do painel de ferramentas: Notas, Criar, Harmonia, Som
 public/
-  samples/piano/  Salamander Grand Piano, CC BY 3.0 (ver LICENCA.md na pasta)
-tests/visual/     scripts Playwright; common.py tem os helpers
+  samples/piano/        Salamander Grand Piano, CC BY 3.0 (ver LICENCA.md na pasta)
+  models/basic-pitch/   modelo de transcrição da Spotify, Apache 2.0
+tests/visual/           roteiros Playwright numerados; common.py tem os helpers;
+                        prints.py gera os prints do README; prod_smoke.py confere o build de produção
 ```
 
 Regras:
@@ -83,6 +91,9 @@ Regras:
 - O piano roll é um controlador fora do React (`PianoRollController`): lê os stores com `getState`/`subscribe` e redesenha por `requestAnimationFrame` só quando algo mudou. Não passe notas, rolagem nem cursor por props ou estado do React.
 - Edições que entram no desfazer passam por `useDoc.edit` (ou `beginGesture` / `live` / `commitGesture` durante um arrasto). Título, tags e instrumento usam `setMeta` e ficam fora do histórico.
 - Em modo dev, `window.__melodias` (stores e engine) e `window.__roll` (controlador, com `pointFor(tick, pitch)`) existem para os testes visuais.
+- Toda nota tocada ao vivo passa por `engine.noteOn` / `noteOff`: é o que acende a tecla e o que o gravador (`store/recorder.ts`) escuta. A voz usa `noteOn(pitch, vel, true)`, que faz tudo isso sem soar.
+- O gravador é ligado antes do `bindAudio` no `App`: ao parar, ele precisa fechar as notas enquanto o transport ainda sabe a posição.
+- Acordes (`melody.chords`) entram no desfazer junto com as notas. O acompanhamento é derivado deles em `music/chords.ts` (`backingNotes`) e tocado por uma voz separada do motor.
 
 ## Modelo de dados
 
@@ -129,13 +140,20 @@ Direção aprovada: o interior de um piano. Interface quieta e quase monocromát
 - Com "grudar na escala" ligado, criar e mover andam por graus; `Ctrl` (ou `Cmd`) deixa a nota sair da escala. A grade de tempo tem o próprio botão.
 - `Alt`+arrastar leva uma cópia. Botão direito apaga. Botão do meio arrasta a grade.
 - Roda: rola; `Shift`+roda: lados; `Ctrl`+roda: zoom horizontal; `Alt`+roda: zoom vertical.
-- Atalhos de letra não podem colidir com as teclas que tocam notas (A W S E D F T G Y H U J K O L P ; e Z X para oitava). Livres hoje: Q R I B N V.
+- Atalhos de letra não podem colidir com as teclas que tocam notas (A W S E D F T G Y H U J K O L P ; e Z X para oitava). Em uso: C (loop), M (metrônomo), R (gravar). Livres: Q I B N V.
+- Gravando, a grade não aceita edição e o teclado só toca notas e controla o transport.
+- A partitura arredonda tudo para semicolcheias: tercinas aparecem aproximadas.
 
 ## Armadilhas já encontradas
 
 - Tone: para tocar a partir de um tick, use `transport.start(undefined, "<tick>i")`. A sequência stop → `ticks = n` → start no mesmo instante às vezes parte do zero.
 - Tone: `transport.ticks` lido direto está adiantado pelo lookahead; a posição do que se ouve é `getTicksAtTime(Tone.immediate())`.
 - Testes Playwright: depois de qualquer coisa que mova o cursor (colar, stop), a grade rola com animação. Espere uns 500 ms antes de calcular um ponto com `pointFor`.
+- Testes Playwright: um clique fora da área visível da grade cai em outro elemento (painel, botão) sem avisar. Mantenha as notas de teste dentro do que cabe na tela.
+- Autosave compara `updatedAt`; por isso o carimbo sempre avança (`touch` em `store/doc.ts`), mesmo com duas mudanças no mesmo milissegundo.
+- Foco: depois de clicar em botão, lista, caixa de seleção ou controle deslizante, o foco é devolvido ao estúdio (`releaseFocus` em `shortcuts.ts`). Sem isso os atalhos param de responder.
+- abcjs trata o clique no SVG inteiro e pinta de vermelho a figura clicada; usamos `selectionColor: 'currentColor'`.
+- Microfone nos testes: `studio(fake_mic=...)` faz o Chromium entregar um WAV como microfone, em laço.
 
 ## Referências estudadas
 
@@ -153,7 +171,7 @@ Direção aprovada: o interior de um piano. Interface quieta e quase monocromát
 - Undo/redo completo e atalhos de teclado, com tela de atalhos em `?`.
 - Biblioteca: salvar, renomear, duplicar, deletar, buscar, tags, autosave.
 
-### Fase 2: ferramentas de criação
+### Fase 2: ferramentas de criação (concluída)
 - Gravar tocando, com metrônomo, contagem e quantização de força ajustável.
 - Cantarolar para criar: ao vivo com pitchy; gravar e transcrever com basic-pitch.
 - Transformações na seleção: transpor (cromático e diatônico), inverter, retrógrado, aumentar/diminuir ritmo, humanizar, espelhar contorno.
