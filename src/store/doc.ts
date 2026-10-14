@@ -39,6 +39,11 @@ type DocState = {
   setClipboard: (notes: Note[]) => void
 }
 
+/** Carimbo de alteração. Sempre avança, mesmo com duas mudanças no mesmo milissegundo: o autosave depende disso. */
+function touch(previous: number): number {
+  return Math.max(Date.now(), previous + 1)
+}
+
 function snapshot(s: Pick<DocState, 'melody' | 'selection'>): Snapshot {
   const { notes, key, scale, bpm, timeSignature } = s.melody
   return { notes, key, scale, bpm, timeSignature, selection: s.selection }
@@ -46,7 +51,7 @@ function snapshot(s: Pick<DocState, 'melody' | 'selection'>): Snapshot {
 
 function restore(melody: Melody, snap: Snapshot): Melody {
   const { selection: _selection, ...content } = snap
-  return { ...melody, ...content, updatedAt: Date.now() }
+  return { ...melody, ...content, updatedAt: touch(melody.updatedAt) }
 }
 
 function pushPast(past: Snapshot[], snap: Snapshot): Snapshot[] {
@@ -65,7 +70,7 @@ export const useDoc = create<DocState>()((set, get) => ({
 
   load: (melody) => set({ melody, selection: [], past: [], future: [], gestureBase: null, coalesce: null }),
 
-  setMeta: (patch) => set((s) => ({ melody: { ...s.melody, ...patch, updatedAt: Date.now() } })),
+  setMeta: (patch) => set((s) => ({ melody: { ...s.melody, ...patch, updatedAt: touch(s.melody.updatedAt) } })),
 
   edit: (patch, opts = {}) =>
     set((s) => {
@@ -75,7 +80,7 @@ export const useDoc = create<DocState>()((set, get) => ({
       const selection = opts.selection ?? s.selection
       const alive = patch.notes ? new Set(patch.notes.map((n) => n.id)) : null
       return {
-        melody: { ...s.melody, ...patch, updatedAt: now },
+        melody: { ...s.melody, ...patch, updatedAt: touch(s.melody.updatedAt) },
         selection: alive ? selection.filter((id) => alive.has(id)) : selection,
         past: merge ? s.past : pushPast(s.past, snapshot(s)),
         future: [],
@@ -100,7 +105,7 @@ export const useDoc = create<DocState>()((set, get) => ({
       if (base.notes === s.melody.notes) return { gestureBase: null }
       return {
         gestureBase: null,
-        melody: { ...s.melody, updatedAt: Date.now() },
+        melody: { ...s.melody, updatedAt: touch(s.melody.updatedAt) },
         past: pushPast(s.past, base),
         future: [],
       }

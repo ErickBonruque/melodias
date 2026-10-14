@@ -1,6 +1,8 @@
 # Melodias: estúdio pessoal de melodias
 
-App web de uso pessoal para criar, ouvir, experimentar e salvar melodias. Um único usuário, sem backend. A prioridade é experiência de uso, interatividade e prazer de usar; escala e multiusuário não importam.
+App web para criar, ouvir, experimentar e salvar melodias. Um único usuário por navegador, sem backend. A prioridade é experiência de uso, interatividade e prazer de usar; escala e multiusuário não importam.
+
+É um projeto aberto, com licença MIT, em https://github.com/ErickBonruque/melodias. O README (inglês, com versão em `README.pt-BR.md`) descreve só o que já funciona; ao concluir algo do roadmap, atualize os dois e, se a tela mudou, refaça os prints com `tests/visual/prints.py`.
 
 Converse com o usuário em português. Textos da interface também em português.
 
@@ -106,6 +108,7 @@ Tempo interno sempre em ticks inteiros, 480 por semínima (PPQ = 480, divisível
 - Notas são imutáveis: toda edição gera um novo array, o que mantém o desfazer simples.
 - Código e identificadores em inglês; comentários, textos da interface e mensagens de commit em português.
 - Incrementos pequenos e funcionais, um commit por passo que funciona.
+- Commits sem linha `Co-Authored-By` nem menção a ferramenta: o dono do repositório é o único autor.
 - Samples e fontes ficam locais (app precisa funcionar offline). Conferir e registrar a licença de tudo que for baixado.
 - Código de terceiros (signal, beepbox) serve de referência de UX; não copiar sem checar licença.
 

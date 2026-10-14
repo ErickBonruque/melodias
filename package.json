@@ -2,6 +2,25 @@
   "name": "melodias",
   "private": true,
   "version": "0.1.0",
+  "description": "Personal melody studio in the browser: piano roll with scale snapping, notes colored by scale degree, Tone.js playback, MIDI input and a local library.",
+  "license": "MIT",
+  "author": "Erick Bonruque",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ErickBonruque/melodias.git"
+  },
+  "homepage": "https://github.com/ErickBonruque/melodias#readme",
+  "keywords": [
+    "music",
+    "melody",
+    "piano-roll",
+    "music-theory",
+    "tonejs",
+    "web-audio",
+    "web-midi",
+    "react",
+    "typescript"
+  ],
   "type": "module",
   "engines": {
     "node": ">=24"
