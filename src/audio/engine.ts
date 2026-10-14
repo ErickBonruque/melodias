@@ -279,9 +279,10 @@ class AudioEngine {
   play(fromTick: number): void {
     this.whenStarted(() => {
       const transport = Tone.getTransport()
-      transport.stop()
-      transport.ticks = Math.max(0, Math.round(fromTick))
-      transport.start()
+      const tick = Math.max(0, Math.round(fromTick))
+      // já tocando, é um salto; parado, parte direto do tick pedido
+      if (transport.state === 'started') transport.ticks = tick
+      else transport.start(undefined, `${tick}i`)
     })
   }
 

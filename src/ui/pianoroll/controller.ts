@@ -271,8 +271,9 @@ export class PianoRollController {
       for (const n of melody.notes) {
         if (n.start > from && n.start <= playhead) this.flashes.set(n.id, now)
       }
-      if (!this.drag) this.followPlayhead(playhead)
     }
+    // tocando ou não, se o cursor andou (stop, colar, Home) a visão vai atrás dele
+    if (playhead !== this.lastPlayhead && !this.drag) this.followPlayhead(playhead)
     this.lastPlayhead = playhead
 
     const flashes = new Map<string, number>()
