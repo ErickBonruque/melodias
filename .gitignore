@@ -1,0 +1,40 @@
+# dependências
+node_modules/
+.pnpm-store/
+
+# build e caches
+dist/
+dist-ssr/
+.vite/
+*.tsbuildinfo
+coverage/
+
+# python (venv do Playwright usado pela skill webapp-testing)
+.venv/
+__pycache__/
+*.pyc
+
+# saídas de teste visual
+tests/visual/out/
+test-results/
+playwright-report/
+
+# ambiente e segredos
+.env
+.env.*
+!.env.example
+
+# claude code: skills e CLAUDE.md são versionados, config local não
+.claude/settings.local.json
+
+# logs
+*.log
+npm-debug.log*
+
+# editor e SO
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
