@@ -35,7 +35,7 @@ with studio() as (page, errors):
     page.wait_for_timeout(150)
     tip = page.locator("[role=status]").first.inner_text()
     print("dica:", tip)
-    assert tip == "Sol4, 5º grau", tip
+    assert tip == "Sol4, 5º grau. 3ª menor acima de Mi4", tip
     shot(page, "02-notas-e-dica")
 
     # arrastar a nota Sol um tempo para a direita e dois graus para cima (Sol → Si)

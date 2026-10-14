@@ -3,6 +3,7 @@ import { engine } from '../audio/engine'
 import { autoConnectMidi } from '../input/midi'
 import { bindAudio } from '../store/bindAudio'
 import { useDoc } from '../store/doc'
+import { useHum } from '../store/hum'
 import { initLibrary, useLibrary } from '../store/library'
 import { bindRecorder } from '../store/recorder'
 import { useTransport } from '../store/transport'
@@ -32,7 +33,7 @@ export function App() {
     void autoConnectMidi()
     if (import.meta.env.DEV) {
       // gancho para os testes visuais (Playwright) lerem e mexerem no estado
-      Object.assign(window, { __melodias: { doc: useDoc, view: useView, transport: useTransport, library: useLibrary, engine } })
+      Object.assign(window, { __melodias: { doc: useDoc, view: useView, transport: useTransport, library: useLibrary, hum: useHum, engine } })
     }
     return () => {
       alive = false

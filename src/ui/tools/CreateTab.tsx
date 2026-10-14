@@ -1,6 +1,8 @@
 import { CONTOURS } from '../../music/generate'
 import { toggleRecord } from '../../store/commands'
+import { degreeLabel, degreeOf, getScale, pitchLabel } from '../../music/scale'
 import { useDoc } from '../../store/doc'
+import { toggleCapture, toggleListening, useHum } from '../../store/hum'
 import { generateIdea, generateMotifVariation, variationSource } from '../../store/ideas'
 import { useTransport } from '../../store/transport'
 import { useView } from '../../store/view'
@@ -196,12 +198,90 @@ function VariationSection() {
   )
 }
 
+function HumSection() {
+  const hum = useHum()
+  const key = useDoc((s) => s.melody.key)
+  const scaleName = useDoc((s) => s.melody.scale)
+  const scale = getScale(key, scaleName)
+  const degree = hum.pitch != null ? degreeOf(hum.pitch, scale) : null
+
+  return (
+    <Section title="Cantarolar">
+      <button className={`btn w-full ${hum.listening ? 'border-bronze text-bronze' : ''}`} onClick={() => void toggleListening()}>
+        {hum.listening ? 'Desligar o microfone' : 'Ligar o microfone e ver a nota'}
+      </button>
+
+      {hum.listening && (
+        <div className="mt-3" role="status" aria-label="Nota cantada">
+          <div className="flex h-14 items-center gap-3">
+            {hum.pitch != null ? (
+              <>
+                <span
+                  className="flex h-12 min-w-[76px] items-center justify-center rounded-md px-2 font-score text-[28px] italic"
+                  style={{ background: degree ? `var(--deg-${degree})` : 'var(--deg-out)', color: 'var(--note-ink)' }}
+                >
+                  {pitchLabel(hum.pitch, scale)}
+                </span>
+                <span className="text-[13px] text-ink-dim">{degreeLabel(hum.pitch, scale)}</span>
+              </>
+            ) : (
+              <span className="text-[13px] text-ink-dim">Cante ou assobie uma nota firme.</span>
+            )}
+          </div>
+          {/* afinação: o ponteiro no meio é a nota cheia */}
+          <div className="relative mt-1 h-2 rounded-full bg-ground" title="Afinação: no centro, a nota está cheia">
+            <span className="absolute top-[-3px] left-1/2 h-[14px] w-px bg-line" />
+            {hum.pitch != null && (
+              <span
+                className="absolute top-0 h-2 w-2 -translate-x-1/2 rounded-full bg-bronze transition-[left] duration-75"
+                style={{ left: `${50 + hum.cents}%` }}
+              />
+            )}
+          </div>
+          <p className="mt-3 text-[12px] text-ink-dim">
+            Para escrever o que você canta, aperte gravar (<kbd>R</kbd>) com o microfone ligado. Use fone de ouvido: sem ele, o
+            microfone também escuta o metrônomo e a melodia.
+          </p>
+        </div>
+      )}
+
+      <button
+        className={`btn mt-4 w-full ${hum.capture === 'recording' ? 'border-felt bg-felt text-white' : ''}`}
+        disabled={hum.capture === 'working'}
+        onClick={() => void toggleCapture()}
+      >
+        {hum.capture === 'recording'
+          ? 'Parar e transcrever'
+          : hum.capture === 'working'
+            ? `Transcrevendo… ${Math.round(hum.progress * 100)}%`
+            : 'Gravar um trecho e transcrever'}
+      </button>
+      <p className="mt-2 text-[12px] text-ink-dim">
+        {hum.capture === 'recording'
+          ? 'Gravando. Cante a frase inteira e depois pare.'
+          : 'Mais lento, mas entende melhor uma frase inteira. O modelo roda no seu navegador; o áudio não sai da sua máquina.'}
+      </p>
+      {hum.message && (
+        <p className="mt-2 text-[13px]" role="status">
+          {hum.message}
+        </p>
+      )}
+      {hum.error && (
+        <p className="mt-2 text-[13px] text-felt-text" role="alert">
+          {hum.error}
+        </p>
+      )}
+    </Section>
+  )
+}
+
 export function CreateTab() {
   return (
     <>
       <IdeaSection />
       <VariationSection />
       <RecordSection />
+      <HumSection />
     </>
   )
 }

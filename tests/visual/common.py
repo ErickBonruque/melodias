@@ -10,11 +10,25 @@ OUT.mkdir(exist_ok=True)
 
 
 @contextmanager
-def studio(width=1366, height=768, theme=None, fresh=True):
-    """Abre o estúdio num Chromium headless. Com fresh=True começa sem nada salvo."""
+def studio(width=1366, height=768, theme=None, fresh=True, fake_mic=None):
+    """Abre o estúdio num Chromium headless. Com fresh=True começa sem nada salvo.
+
+    fake_mic: caminho de um WAV que o navegador entrega como se fosse o microfone, em laço.
+    """
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True, args=["--autoplay-policy=no-user-gesture-required"])
-        context = browser.new_context(viewport={"width": width, "height": height}, device_scale_factor=1)
+        args = ["--autoplay-policy=no-user-gesture-required"]
+        if fake_mic:
+            args += [
+                "--use-fake-ui-for-media-stream",
+                "--use-fake-device-for-media-stream",
+                f"--use-file-for-fake-audio-capture={fake_mic}",
+            ]
+        browser = p.chromium.launch(headless=True, args=args)
+        context = browser.new_context(
+            viewport={"width": width, "height": height},
+            device_scale_factor=1,
+            permissions=["microphone"] if fake_mic else [],
+        )
         page = context.new_page()
         errors = []
         page.on("console", lambda m: errors.append(f"[{m.type}] {m.text}") if m.type in ("error", "warning") else None)

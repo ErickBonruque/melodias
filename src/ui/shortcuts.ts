@@ -87,10 +87,14 @@ export const SHORTCUT_GROUPS: { title: string; items: { keys: string[]; label: s
   },
 ]
 
+const NOT_TEXT = new Set(['checkbox', 'radio', 'range', 'button', 'color', 'file'])
+
+/** O foco está num campo em que as teclas são texto (ou navegam opções), e não atalhos. */
 function isTyping(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null
   if (!el || !el.tagName) return false
-  return el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable
+  if (el.tagName === 'INPUT') return !NOT_TEXT.has((el as HTMLInputElement).type)
+  return el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable
 }
 
 function onKeyDown(e: KeyboardEvent): void {
@@ -212,11 +216,18 @@ function onKeyUp(e: KeyboardEvent): void {
   noteKeyUp(e)
 }
 
-/** Depois de um clique de mouse o foco volta para o estúdio, para os atalhos seguirem valendo. */
+/**
+ * Depois de usar um controle com o mouse (botão, lista, caixa de seleção, controle
+ * deslizante) o foco volta para o estúdio, para os atalhos seguirem valendo.
+ */
 function releaseFocus(e: Event): void {
   const el = document.activeElement as HTMLElement | null
   if (!el) return
-  if (e.type === 'change' ? el.tagName === 'SELECT' : el.tagName === 'BUTTON' && (e as MouseEvent).detail > 0) el.blur()
+  if (e.type === 'change') {
+    if (el.tagName === 'SELECT' || (el.tagName === 'INPUT' && NOT_TEXT.has((el as HTMLInputElement).type))) el.blur()
+  } else if (el.tagName === 'BUTTON' && (e as MouseEvent).detail > 0) {
+    el.blur()
+  }
 }
 
 export function installShortcuts(): () => void {
