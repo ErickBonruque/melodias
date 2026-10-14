@@ -130,7 +130,14 @@ export class PianoRollController {
         if (this.pointer && !this.drag) this.updateHover(this.pointer)
       }),
     )
-    this.cleanup.push(useTransport.subscribe(markDirty))
+    let revealed = useTransport.getState().reveal
+    this.cleanup.push(
+      useTransport.subscribe((t) => {
+        this.dirty = true
+        if (t.reveal && t.reveal !== revealed) this.reveal(t.reveal.start, t.reveal.end)
+        revealed = t.reveal
+      }),
+    )
     this.cleanup.push(useView.subscribe((s) => this.onViewChange(s.pxPerBeat, s.rowH)))
     this.cleanup.push(engine.onLiveChange(markDirty))
     void document.fonts?.ready.then(markDirty)
@@ -333,6 +340,18 @@ export class PianoRollController {
     const px = playhead * c.pxPerTick
     if (x < KEYS_W) this.targetX = px - 48
     else if (x > this.width - 48) this.targetX = playing ? px - 48 : px - c.gridW + 48
+  }
+
+  /** Rola o mínimo para o trecho caber na tela; se não couber, mostra o começo dele. */
+  private reveal(start: number, end: number): void {
+    const c = this.coords()
+    const margin = 32
+    const x0 = start * c.pxPerTick
+    const x1 = end * c.pxPerTick
+    if (x0 - margin < this.targetX || x1 - x0 > c.gridW - 2 * margin) this.targetX = x0 - margin
+    else if (x1 + margin > this.targetX + c.gridW) this.targetX = x1 + margin - c.gridW
+    this.clampScroll()
+    this.dirty = true
   }
 
   /** Arrastar perto da borda rola a grade. Devolve true se rolou. */

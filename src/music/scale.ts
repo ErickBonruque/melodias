@@ -87,7 +87,7 @@ export function snapToScale(pitch: number, s: ScaleInfo, bias: -1 | 1 = -1): num
 }
 
 /** Índice absoluto do grau: conta os passos de escala desde a tônica da oitava 0. */
-function stepIndex(pitch: number, s: ScaleInfo): number {
+export function stepIndex(pitch: number, s: ScaleInfo): number {
   const rel = pitch - s.tonic
   const octave = Math.floor(rel / 12)
   const offset = ((rel % 12) + 12) % 12
@@ -95,7 +95,7 @@ function stepIndex(pitch: number, s: ScaleInfo): number {
   return octave * s.chromas.length + idx
 }
 
-function pitchFromStepIndex(index: number, s: ScaleInfo): number {
+export function pitchFromStepIndex(index: number, s: ScaleInfo): number {
   const n = s.chromas.length
   const octave = Math.floor(index / n)
   const idx = ((index % n) + n) % n

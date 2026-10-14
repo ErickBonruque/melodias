@@ -15,6 +15,8 @@ type TransportState = {
   /** Nome do instrumento que ainda está carregando samples, se houver. */
   loadingInstrument: string | null
   midiInputs: string[]
+  /** Pedido para o piano roll trazer este trecho (em ticks) para a área visível. */
+  reveal: { start: number; end: number } | null
   set: (patch: Partial<Omit<TransportState, 'set'>>) => void
 }
 
@@ -27,5 +29,6 @@ export const useTransport = create<TransportState>()((set) => ({
   audioReady: false,
   loadingInstrument: null,
   midiInputs: [],
+  reveal: null,
   set: (patch) => set(patch),
 }))

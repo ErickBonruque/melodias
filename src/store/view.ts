@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import type { Contour } from '../music/generate'
 import { PPQ, type GridValue } from '../music/types'
 
 export type Tool = 'pencil' | 'select'
@@ -26,6 +27,8 @@ type ViewState = {
   /** Ao terminar de gravar, puxa as notas para a grade com esta força (0 a 1). */
   recQuantize: boolean
   recStrength: number
+  /** Controles do gerador de ideias. */
+  idea: { contour: Contour; bars: number; density: number; leap: number; rest: number; autoPlay: boolean }
   libraryOpen: boolean
   toolsOpen: boolean
   toolsTab: ToolsTab
@@ -48,6 +51,7 @@ export const useView = create<ViewState>()(
       countInBars: 1,
       recQuantize: true,
       recStrength: 1,
+      idea: { contour: 'arch', bars: 2, density: 0.5, leap: 2, rest: 1, autoPlay: true },
       libraryOpen: true,
       toolsOpen: true,
       toolsTab: 'notes',
