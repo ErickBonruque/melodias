@@ -3,7 +3,7 @@ import { createMelody } from '../music/notes'
 import type { Melody, Note } from '../music/types'
 
 /** A parte da melodia que entra no desfazer/refazer. */
-export type Content = Pick<Melody, 'notes' | 'key' | 'scale' | 'bpm' | 'timeSignature'>
+export type Content = Pick<Melody, 'notes' | 'key' | 'scale' | 'bpm' | 'timeSignature' | 'chords'>
 type Snapshot = Content & { selection: string[] }
 type Meta = Pick<Melody, 'title' | 'tags' | 'instrument'>
 
@@ -45,8 +45,8 @@ function touch(previous: number): number {
 }
 
 function snapshot(s: Pick<DocState, 'melody' | 'selection'>): Snapshot {
-  const { notes, key, scale, bpm, timeSignature } = s.melody
-  return { notes, key, scale, bpm, timeSignature, selection: s.selection }
+  const { notes, key, scale, bpm, timeSignature, chords } = s.melody
+  return { notes, key, scale, bpm, timeSignature, chords, selection: s.selection }
 }
 
 function restore(melody: Melody, snap: Snapshot): Melody {

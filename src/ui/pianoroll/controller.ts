@@ -30,7 +30,7 @@ import { getPlayhead, seek } from '../../store/commands'
 import { useDoc } from '../../store/doc'
 import { useTransport, type LoopRegion } from '../../store/transport'
 import { ZOOM_X, ZOOM_Y, useView } from '../../store/view'
-import { Coords, KEYS_W, RULER_H, contentHeight } from './coords'
+import { CHORDS_H, Coords, KEYS_W, RULER_H, contentHeight } from './coords'
 import { readPalette, type Palette } from './palette'
 import { draw, type Scene } from './render'
 
@@ -68,6 +68,7 @@ type Drag =
 type Pointer = { x: number; y: number; shift: boolean; free: boolean }
 
 const DRAG_THRESHOLD = 4
+const NO_CHORDS: never[] = []
 const FLASH_MS = 280
 
 /**
@@ -345,6 +346,7 @@ export class PianoRollController {
       rect: this.rect,
       lit,
       labels: this.labelCache?.labels ?? null,
+      chords: melody.chords ?? NO_CHORDS,
       flashes,
       contentTicks: this.contentTicks(),
     }
@@ -468,6 +470,11 @@ export class PianoRollController {
       return
     }
 
+    // clicar na faixa de cifras abre o editor de acordes
+    if (region === 'grid' && e.button === 0 && p.y < RULER_H + CHORDS_H && (doc.melody.chords?.length ?? 0) > 0) {
+      view.set({ toolsOpen: true, toolsTab: 'harmony' })
+      return
+    }
     // gravando, a grade não aceita edição: só o teclado lateral e a rolagem
     if (region !== 'grid' || useTransport.getState().recording) return
     const tick = c.tickOfX(p.x)
@@ -749,7 +756,10 @@ export class PianoRollController {
     let hoverKey: number | null = null
     let ghost: Scene['ghost'] = null
 
-    if (region === 'grid') {
+    const onChords = region === 'grid' && p.y < RULER_H + CHORDS_H && (useDoc.getState().melody.chords?.length ?? 0) > 0
+    if (onChords) {
+      cursor = 'pointer'
+    } else if (region === 'grid') {
       const tick = c.tickOfX(p.x)
       const pitch = c.pitchOfY(p.y)
       hoverNote = tick >= 0 ? noteAt(useDoc.getState().melody.notes, tick, pitch) : undefined

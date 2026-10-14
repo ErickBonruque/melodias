@@ -1,8 +1,8 @@
 import { MAX_PITCH, MIN_PITCH } from '../../music/notes'
 import { chromaOf, degreeOf, pitchLabel, type ScaleInfo } from '../../music/scale'
 import { ticksPerBar, ticksPerBeat } from '../../music/time'
-import type { Note, TimeSignature } from '../../music/types'
-import { Coords, KEYS_W, RULER_H, contentHeight, isBlackKey } from './coords'
+import type { ChordEvent, Note, TimeSignature } from '../../music/types'
+import { CHORDS_H, Coords, KEYS_W, RULER_H, contentHeight, isBlackKey } from './coords'
 import type { Palette } from './palette'
 
 export type Scene = {
@@ -27,6 +27,8 @@ export type Scene = {
   flashes: ReadonlyMap<string, number>
   /** Texto de cada nota quando o rótulo não é o nome (grau ou intervalo). */
   labels: ReadonlyMap<string, string> | null
+  /** Cifras do acompanhamento, desenhadas numa faixa no topo da grade. */
+  chords: ChordEvent[]
   /** Largura total rolável, em ticks. */
   contentTicks: number
 }
@@ -202,6 +204,35 @@ function drawGrid(ctx: CanvasRenderingContext2D, c: Coords, s: Scene, pal: Palet
     ctx.strokeStyle = pal.bronze
     ctx.lineWidth = 1
     ctx.strokeRect(Math.round(x0) + 0.5, Math.round(y0) + 0.5, Math.round(x1 - x0), Math.round(y1 - y0))
+  }
+
+  // faixa de cifras, por cima das notas: cada acorde ocupa o trecho em que soa
+  if (s.chords.length > 0) {
+    ctx.fillStyle = pal.rollRuler
+    ctx.globalAlpha = 0.94
+    ctx.fillRect(KEYS_W, RULER_H, c.gridW, CHORDS_H)
+    ctx.globalAlpha = 1
+    ctx.fillStyle = pal.rollBeat
+    ctx.fillRect(KEYS_W, RULER_H + CHORDS_H - 1, c.gridW, 1)
+    ctx.font = `600 12px ${FONT}`
+    ctx.textBaseline = 'middle'
+    ctx.textAlign = 'left'
+    for (const chord of s.chords) {
+      const x0 = c.xOfTick(chord.start)
+      const x1 = c.xOfTick(chord.start + chord.duration)
+      if (x1 < KEYS_W || x0 > c.width) continue
+      const sounding = s.playing && s.playhead >= chord.start && s.playhead < chord.start + chord.duration
+      if (sounding) {
+        ctx.fillStyle = pal.bronze
+        ctx.globalAlpha = 0.2
+        ctx.fillRect(x0, RULER_H, x1 - x0, CHORDS_H - 1)
+        ctx.globalAlpha = 1
+      }
+      ctx.fillStyle = pal.rollBar
+      ctx.fillRect(Math.round(x0), RULER_H, 1, CHORDS_H - 1)
+      ctx.fillStyle = sounding ? pal.bronze : pal.ink
+      ctx.fillText(chord.symbol.replace(/#/g, '♯').replace(/([A-G])b/, '$1♭'), x0 + 7, RULER_H + CHORDS_H / 2)
+    }
   }
 
   // cursor de reprodução

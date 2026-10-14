@@ -1,4 +1,5 @@
 import { engine } from '../audio/engine'
+import { backingNotes } from '../music/chords'
 import { melodyEnd } from '../music/notes'
 import { useDoc } from './doc'
 import { useTransport } from './transport'
@@ -19,6 +20,20 @@ export function bindAudio(): () => void {
   }
   syncDoc()
 
+  const syncBacking = () => {
+    const { melody } = useDoc.getState()
+    const { backing } = useView.getState()
+    const chords = melody.chords ?? []
+    engine.setBacking(backing.on && chords.length > 0 ? backingNotes(chords, backing.style, melody.timeSignature) : [])
+    engine.setBackingVolume(backing.volume)
+  }
+  syncBacking()
+  let prevBacking = useView.getState().backing
+  const unsubView = useView.subscribe((v) => {
+    if (v.backing !== prevBacking) syncBacking()
+    prevBacking = v.backing
+  })
+
   let prevMelody = useDoc.getState().melody
   const unsubDoc = useDoc.subscribe((s) => {
     const m = s.melody
@@ -32,6 +47,7 @@ export function bindAudio(): () => void {
       // gravando, a reprodução não para no fim: a melodia ainda está crescendo
       engine.setEnd(useTransport.getState().recording ? null : melodyEnd(m))
     }
+    if (m.chords !== prevMelody.chords || m.timeSignature !== prevMelody.timeSignature) syncBacking()
     prevMelody = m
   })
 
@@ -79,6 +95,7 @@ export function bindAudio(): () => void {
 
   return () => {
     unsubDoc()
+    unsubView()
     unsubTransport()
     engine.onEnded = null
     engine.onLoading = null

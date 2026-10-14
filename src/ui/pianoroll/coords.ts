@@ -3,6 +3,8 @@ import { PPQ } from '../../music/types'
 
 export const KEYS_W = 72
 export const RULER_H = 30
+/** Altura da faixa de cifras, que aparece no topo da grade quando a melodia tem acordes. */
+export const CHORDS_H = 22
 
 export type Region = 'corner' | 'ruler' | 'keys' | 'grid'
 

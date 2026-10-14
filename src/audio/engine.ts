@@ -12,6 +12,8 @@ export type InstrumentId = (typeof INSTRUMENTS)[number]['id']
 
 type Voice = Tone.Sampler | Tone.PolySynth
 
+type BackingNote = Omit<Note, 'id'>
+
 export type LiveNoteEvent = { type: 'on' | 'off'; pitch: number; velocity: number }
 
 const PIANO_SAMPLES = ['A0', 'C1', 'D#1', 'F#1', 'A1', 'C2', 'D#2', 'F#2', 'A2', 'C3', 'D#3', 'F#3', 'A3', 'C4', 'D#4', 'F#4', 'A4', 'C5', 'D#5', 'F#5', 'A5', 'C6', 'D#6', 'F#6', 'A6', 'C7', 'D#7', 'F#7', 'A7', 'C8']
@@ -33,6 +35,10 @@ class AudioEngine {
   private click: Tone.Synth | null = null
 
   private part: Tone.Part<{ time: string; note: Note }> | null = null
+  private backingPart: Tone.Part<{ time: string; note: BackingNote }> | null = null
+  private backing: BackingNote[] = []
+  private backingVoice: Tone.PolySynth | null = null
+  private backingVolume = 0.6
   private notes: Note[] = []
   private timeSignature: TimeSignature = [4, 4]
   private bpm = 96
@@ -77,9 +83,18 @@ class AudioEngine {
         volume: -8,
       }).connect(limiter)
 
+      // acompanhamento: um timbre macio e sem ataque, para ficar atrás da melodia
+      this.backingVoice = new Tone.PolySynth(Tone.Synth, {
+        oscillator: { type: 'triangle' },
+        envelope: { attack: 0.04, decay: 0.4, sustain: 0.6, release: 0.5 },
+      }).connect(this.out)
+      this.backingVoice.maxPolyphony = 32
+      this.applyBackingVolume()
+
       this.started = true
       this.voice(this.instrument)
       this.rebuildPart()
+      this.rebuildBacking()
       this.applyLoop()
       this.scheduleEnd()
       this.scheduleMetronome()
@@ -201,6 +216,7 @@ class AudioEngine {
 
   private releaseAll(): void {
     for (const { node } of this.voices.values()) node.releaseAll()
+    this.backingVoice?.releaseAll()
     for (const pitch of [...this.live]) this.noteOff(pitch)
   }
 
@@ -222,6 +238,36 @@ class AudioEngine {
     if (notes === this.notes) return
     this.notes = notes
     if (this.started) this.rebuildPart()
+  }
+
+  /** Notas do acompanhamento (as cifras já abertas em notas). Lista vazia desliga. */
+  setBacking(notes: BackingNote[]): void {
+    this.backing = notes
+    if (this.started) this.rebuildBacking()
+  }
+
+  setBackingVolume(volume: number): void {
+    this.backingVolume = volume
+    if (this.started) this.applyBackingVolume()
+  }
+
+  private applyBackingVolume(): void {
+    if (!this.backingVoice) return
+    // 0 a 1 vira de -30 dB a -8 dB: o acompanhamento nunca cobre a melodia
+    this.backingVoice.volume.value = this.backingVolume <= 0 ? -Infinity : -30 + this.backingVolume * 22
+  }
+
+  private rebuildBacking(): void {
+    this.backingPart?.dispose()
+    this.backingPart = null
+    this.backingVoice?.releaseAll()
+    if (this.backing.length === 0) return
+    const events = this.backing.map((note) => ({ time: `${note.start}i`, note }))
+    this.backingPart = new Tone.Part((time, { note }) => {
+      const seconds = Tone.Ticks(note.duration).toSeconds()
+      this.backingVoice?.triggerAttackRelease(midiToFreq(note.pitch), seconds, time, note.velocity)
+    }, events)
+    this.backingPart.start(0)
   }
 
   /** Tick em que a reprodução para sozinha quando não há loop. Com null, segue até mandarem parar. */

@@ -1,4 +1,7 @@
 import { detectKey, outOfScale, rangeLabel, sameNotes } from '../../music/analysis'
+import { PROGRESSIONS, diatonicChords, fillProgression, suggestChords, type BackingStyle } from '../../music/chords'
+import { melodyEnd } from '../../music/notes'
+import { ticksPerBar } from '../../music/time'
 import { getScale, scaleLabel, snapToScale } from '../../music/scale'
 import { useDoc } from '../../store/doc'
 import { useView, type NoteLabel } from '../../store/view'
@@ -115,9 +118,142 @@ function AnalysisSection() {
   )
 }
 
+const pretty = (symbol: string) => symbol.replace(/#/g, '♯').replace(/([A-G])b/, '$1♭')
+
+const SLOTS = [
+  { value: 0.5, label: 'meio compasso' },
+  { value: 1, label: '1 compasso' },
+  { value: 2, label: '2 compassos' },
+]
+
+function ChordsSection() {
+  const notes = useDoc((s) => s.melody.notes)
+  const key = useDoc((s) => s.melody.key)
+  const scale = useDoc((s) => s.melody.scale)
+  const timeSignature = useDoc((s) => s.melody.timeSignature)
+  const chords = useDoc((s) => s.melody.chords) ?? []
+  const backing = useView((s) => s.backing)
+  const setBacking = (patch: Partial<typeof backing>) => useView.getState().set({ backing: { ...backing, ...patch } })
+
+  if (notes.length === 0 && chords.length === 0) {
+    return (
+      <Section title="Acordes">
+        <p className="text-[13px] text-ink-dim">
+          Escreva uma melodia e volte aqui para ouvi-la com acompanhamento: dá para pedir uma sugestão de acordes ou partir de
+          uma progressão conhecida.
+        </p>
+      </Section>
+    )
+  }
+
+  const options = diatonicChords(key, scale)
+  const slot = Math.round(ticksPerBar(timeSignature) * backing.slotBars)
+  const total = melodyEnd({ notes, timeSignature })
+  const setChords = (next: typeof chords) => useDoc.getState().edit({ chords: next })
+
+  return (
+    <Section title="Acordes">
+      <label className="flex items-center justify-between gap-3 text-[13px]">
+        Acorde a cada
+        <select className="field w-[136px]" value={backing.slotBars} onChange={(e) => setBacking({ slotBars: Number(e.target.value) })}>
+          {SLOTS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <button
+        className="btn btn-primary mt-3 w-full"
+        disabled={notes.length === 0}
+        title="Escolhe, para cada trecho, o acorde da escala que mais combina com as notas que soam nele"
+        onClick={() => setChords(suggestChords(notes, key, scale, slot, total))}
+      >
+        Sugerir acordes para a melodia
+      </button>
+
+      <p className="mt-4 mb-1.5 text-[13px]">Ou parta de uma progressão</p>
+      <div className="grid grid-cols-2 gap-1.5">
+        {PROGRESSIONS.map((p) => (
+          <button
+            key={p.id}
+            className="btn h-[30px] px-1 text-[12px] font-medium"
+            title={p.degrees.map((d) => pretty(options[d - 1].symbol)).join('  ')}
+            onClick={() => setChords(fillProgression(p.degrees, key, scale, slot, total))}
+          >
+            {p.degrees.map((d) => options[d - 1].roman).join(' ')}
+          </button>
+        ))}
+      </div>
+
+      {chords.length > 0 && (
+        <>
+          <p className="mt-4 mb-1.5 text-[13px]">Acorde por acorde</p>
+          <div className="grid grid-cols-4 gap-1.5">
+            {chords.map((chord, i) => (
+              <select
+                key={chord.start}
+                aria-label={`Acorde ${i + 1}`}
+                className="field h-[30px] px-1 text-[12px] font-semibold"
+                value={chord.symbol}
+                onChange={(e) => setChords(chords.map((c, j) => (j === i ? { ...c, symbol: e.target.value } : c)))}
+              >
+                {!options.some((o) => o.symbol === chord.symbol) && <option value={chord.symbol}>{pretty(chord.symbol)}</option>}
+                {options.map((o) => (
+                  <option key={o.symbol} value={o.symbol}>
+                    {pretty(o.symbol)}
+                  </option>
+                ))}
+              </select>
+            ))}
+          </div>
+
+          <label className="mt-4 flex cursor-pointer items-center gap-2.5 text-[13px]">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-(--bronze)"
+              checked={backing.on}
+              onChange={(e) => setBacking({ on: e.target.checked })}
+            />
+            Tocar o acompanhamento
+          </label>
+          {backing.on && (
+            <div className="mt-2 flex items-center gap-2 text-[13px]">
+              <select
+                aria-label="Jeito de tocar os acordes"
+                className="field w-[92px]"
+                value={backing.style}
+                onChange={(e) => setBacking({ style: e.target.value as BackingStyle })}
+              >
+                <option value="block">Bloco</option>
+                <option value="arp">Arpejo</option>
+              </select>
+              <input
+                type="range"
+                aria-label="Volume do acompanhamento"
+                className="min-w-0 flex-1"
+                min={0}
+                max={100}
+                step={5}
+                value={Math.round(backing.volume * 100)}
+                onChange={(e) => setBacking({ volume: Number(e.target.value) / 100 })}
+              />
+            </div>
+          )}
+          <button className="btn mt-3 w-full" onClick={() => setChords([])}>
+            Tirar os acordes
+          </button>
+        </>
+      )}
+    </Section>
+  )
+}
+
 export function HarmonyTab() {
   return (
     <>
+      <ChordsSection />
       <AnalysisSection />
     </>
   )

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import type { BackingStyle } from '../music/chords'
 import type { Contour } from '../music/generate'
 import { PPQ, type GridValue } from '../music/types'
 
@@ -28,6 +29,8 @@ type ViewState = {
   /** Ao terminar de gravar, puxa as notas para a grade com esta força (0 a 1). */
   recQuantize: boolean
   recStrength: number
+  /** Acompanhamento: toca as cifras junto com a melodia. `slotBars` é o tamanho de cada acorde ao preencher. */
+  backing: { on: boolean; style: BackingStyle; volume: number; slotBars: number }
   /** Controles do gerador de ideias. */
   idea: { contour: Contour; bars: number; density: number; leap: number; rest: number; autoPlay: boolean }
   libraryOpen: boolean
@@ -55,6 +58,7 @@ export const useView = create<ViewState>()(
       countInBars: 1,
       recQuantize: true,
       recStrength: 1,
+      backing: { on: true, style: 'block', volume: 0.6, slotBars: 1 },
       idea: { contour: 'arch', bars: 2, density: 0.5, leap: 2, rest: 1, autoPlay: true },
       libraryOpen: true,
       toolsOpen: true,
