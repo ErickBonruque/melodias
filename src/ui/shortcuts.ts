@@ -14,9 +14,11 @@ import {
   toggleLoop,
   toggleMetronome,
   togglePlay,
+  toggleRecord,
   zoomX,
 } from '../store/commands'
 import { useDoc } from '../store/doc'
+import { useTransport } from '../store/transport'
 import { useView } from '../store/view'
 
 /** O que aparece na tela de atalhos (tecla ?). */
@@ -27,6 +29,7 @@ export const SHORTCUT_GROUPS: { title: string; items: { keys: string[]; label: s
       { keys: ['Espaço'], label: 'Tocar ou pausar' },
       { keys: ['Enter'], label: 'Parar e voltar ao ponto de partida' },
       { keys: ['Home'], label: 'Levar o cursor ao início' },
+      { keys: ['R'], label: 'Gravar o que você tocar, com contagem de entrada' },
       { keys: ['C'], label: 'Ligar ou desligar o loop' },
       { keys: ['M'], label: 'Ligar ou desligar o metrônomo' },
     ],
@@ -109,6 +112,18 @@ function onKeyDown(e: KeyboardEvent): void {
   // botão com foco pelo teclado: Espaço e Enter acionam o botão, não o transport
   if ((e.key === ' ' || e.key === 'Enter') && (e.target as HTMLElement | null)?.tagName === 'BUTTON') return
 
+  // gravando, o teclado é só instrumento e transport: nada de editar no meio da tomada
+  if (useTransport.getState().recording) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return
+    if (e.key === ' ' || e.key === 'Enter' || e.code === 'KeyR') {
+      e.preventDefault()
+      if (!e.repeat) toggleRecord()
+    } else if (e.code === 'KeyZ' && !e.repeat) shiftOctave(-1)
+    else if (e.code === 'KeyX' && !e.repeat) shiftOctave(1)
+    else if (noteKeyDown(e)) e.preventDefault()
+    return
+  }
+
   const mod = e.ctrlKey || e.metaKey
   if (mod) {
     const run = (fn: () => void) => {
@@ -172,7 +187,7 @@ function onKeyDown(e: KeyboardEvent): void {
       return e.shiftKey ? resizeSelection(1) : nudgeSelection(1, 0)
   }
 
-  if (e.repeat && e.code in { KeyZ: 1, KeyX: 1, KeyC: 1, KeyM: 1 }) return
+  if (e.repeat && e.code in { KeyZ: 1, KeyX: 1, KeyC: 1, KeyM: 1, KeyR: 1 }) return
   switch (e.code) {
     case 'Digit1':
       return view.set({ tool: 'pencil' })
@@ -182,6 +197,8 @@ function onKeyDown(e: KeyboardEvent): void {
       return toggleLoop()
     case 'KeyM':
       return toggleMetronome()
+    case 'KeyR':
+      return toggleRecord()
     case 'KeyZ':
       return shiftOctave(-1)
     case 'KeyX':

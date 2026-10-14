@@ -21,6 +21,11 @@ type ViewState = {
   lastDuration: number
   /** Oitava em que o teclado do computador toca (4 = a tecla A é o Dó4). */
   kbOctave: number
+  /** Compassos de contagem antes de gravar. */
+  countInBars: number
+  /** Ao terminar de gravar, puxa as notas para a grade com esta força (0 a 1). */
+  recQuantize: boolean
+  recStrength: number
   libraryOpen: boolean
   toolsOpen: boolean
   toolsTab: ToolsTab
@@ -40,6 +45,9 @@ export const useView = create<ViewState>()(
       rowH: ZOOM_Y.default,
       lastDuration: PPQ / 2,
       kbOctave: 4,
+      countInBars: 1,
+      recQuantize: true,
+      recStrength: 1,
       libraryOpen: true,
       toolsOpen: true,
       toolsTab: 'notes',

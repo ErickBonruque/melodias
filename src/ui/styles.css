@@ -178,6 +178,13 @@
     color: var(--bronze);
   }
 
+  .tool.recording,
+  .tool.recording:hover:not(:disabled) {
+    background: var(--felt);
+    color: #fff;
+    animation: rec-pulse 1.2s ease-in-out infinite;
+  }
+
   /* Botão com texto. */
   .btn {
     display: inline-flex;
@@ -281,6 +288,12 @@
     border-radius: 50%;
     background: var(--bronze);
     border: 2px solid var(--panel);
+  }
+}
+
+@keyframes rec-pulse {
+  50% {
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--felt) 30%, transparent);
   }
 }
 

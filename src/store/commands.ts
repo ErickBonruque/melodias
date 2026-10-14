@@ -17,14 +17,22 @@ export function getPlayhead(): number {
 
 export function togglePlay(): void {
   const t = useTransport.getState()
-  if (t.playing) t.set({ playing: false, cursor: Math.round(getPlayhead()) })
+  if (t.playing) t.set({ playing: false, recording: false, cursor: t.recording ? t.cursor : Math.round(getPlayhead()) })
   else t.set({ playing: true })
+}
+
+/** Começa a gravar (com contagem) ou encerra a gravação em andamento. */
+export function toggleRecord(): void {
+  const t = useTransport.getState()
+  if (t.recording) t.set({ playing: false, recording: false })
+  else if (t.playing) t.set({ recording: true })
+  else t.set({ playing: true, recording: true })
 }
 
 /** Tocando: para e volta para onde começou. Parado: volta para o início. */
 export function stop(): void {
   const t = useTransport.getState()
-  if (t.playing) t.set({ playing: false })
+  if (t.playing) t.set({ playing: false, recording: false })
   else t.set({ cursor: 0 })
 }
 

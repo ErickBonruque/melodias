@@ -13,6 +13,7 @@ export type Scene = {
   gridStep: number
   playhead: number
   playing: boolean
+  recording: boolean
   loop: { on: boolean; start: number; end: number }
   hoverNoteId: string | null
   hoverKey: number | null
@@ -204,7 +205,7 @@ function drawGrid(ctx: CanvasRenderingContext2D, c: Coords, s: Scene, pal: Palet
   // cursor de reprodução
   const px = c.xOfTick(s.playhead)
   if (px >= KEYS_W - 1 && px <= c.width) {
-    ctx.fillStyle = pal.bronze
+    ctx.fillStyle = s.recording ? pal.felt : pal.bronze
     ctx.fillRect(Math.round(px) - 0.75, RULER_H, 1.5, c.gridH)
   }
 
@@ -283,7 +284,7 @@ function drawRuler(ctx: CanvasRenderingContext2D, c: Coords, s: Scene, pal: Pale
   }
 
   const px = c.xOfTick(s.playhead)
-  ctx.fillStyle = pal.bronze
+  ctx.fillStyle = s.recording ? pal.felt : pal.bronze
   ctx.beginPath()
   ctx.moveTo(px - 6, RULER_H - 11)
   ctx.lineTo(px + 6, RULER_H - 11)

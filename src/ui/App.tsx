@@ -4,6 +4,7 @@ import { autoConnectMidi } from '../input/midi'
 import { bindAudio } from '../store/bindAudio'
 import { useDoc } from '../store/doc'
 import { initLibrary, useLibrary } from '../store/library'
+import { bindRecorder } from '../store/recorder'
 import { useTransport } from '../store/transport'
 import { useView } from '../store/view'
 import { AudioNotice } from './AudioNotice'
@@ -17,6 +18,8 @@ import { TransportBar } from './TransportBar'
 
 export function App() {
   useEffect(() => {
+    // o gravador entra antes do áudio: ao parar, ele fecha as notas enquanto o transport ainda sabe a posição
+    const unbindRecorder = bindRecorder()
     const unbindAudio = bindAudio()
     const removeShortcuts = installShortcuts()
     let stopAutosave: (() => void) | null = null
@@ -33,6 +36,7 @@ export function App() {
     return () => {
       alive = false
       unbindAudio()
+      unbindRecorder()
       removeShortcuts()
       stopAutosave?.()
     }

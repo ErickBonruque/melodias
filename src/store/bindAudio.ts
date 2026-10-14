@@ -2,6 +2,7 @@ import { engine } from '../audio/engine'
 import { melodyEnd } from '../music/notes'
 import { useDoc } from './doc'
 import { useTransport } from './transport'
+import { useView } from './view'
 
 /**
  * Liga os stores ao motor de áudio. A interface só mexe no estado;
@@ -28,7 +29,8 @@ export function bindAudio(): () => void {
     if (m.instrument !== prevMelody.instrument) engine.setInstrument(m.instrument)
     if (m.notes !== prevMelody.notes || m.timeSignature !== prevMelody.timeSignature) {
       engine.setNotes(m.notes)
-      engine.setEnd(melodyEnd(m))
+      // gravando, a reprodução não para no fim: a melodia ainda está crescendo
+      engine.setEnd(useTransport.getState().recording ? null : melodyEnd(m))
     }
     prevMelody = m
   })
@@ -39,18 +41,20 @@ export function bindAudio(): () => void {
   const unsubTransport = useTransport.subscribe((t) => {
     if (t.loop !== prev.loop) engine.setLoop(t.loop)
     if (t.metronome !== prev.metronome) engine.setMetronome(t.metronome)
+    if (t.recording !== prev.recording) engine.setEnd(t.recording ? null : melodyEnd(useDoc.getState().melody))
     if (t.playing !== prev.playing) {
       if (t.playing) {
         const loop = t.loop.on && t.loop.end > t.loop.start ? t.loop : null
         const end = melodyEnd(useDoc.getState().melody)
         let from = t.cursor
         if (loop && (from < loop.start || from >= loop.end)) from = loop.start
-        if (!loop && from >= end) from = 0
+        if (!loop && from >= end && !t.recording) from = 0
         if (from !== t.cursor) {
           prev = { ...t, cursor: from }
           t.set({ cursor: from })
         }
-        engine.play(from)
+        const { melody } = useDoc.getState()
+        engine.play(from, t.recording ? useView.getState().countInBars * melody.timeSignature[0] : 0)
       } else {
         engine.stop()
       }

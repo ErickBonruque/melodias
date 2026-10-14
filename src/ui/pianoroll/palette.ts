@@ -3,6 +3,7 @@ export type Palette = {
   ink: string
   inkDim: string
   bronze: string
+  felt: string
   rollIn: string
   rollOut: string
   rollTonic: string
@@ -30,6 +31,7 @@ export function readPalette(): Palette {
     ink: v('--ink'),
     inkDim: v('--ink-dim'),
     bronze: v('--bronze'),
+    felt: v('--felt'),
     rollIn: v('--roll-in'),
     rollOut: v('--roll-out'),
     rollTonic: v('--roll-tonic'),

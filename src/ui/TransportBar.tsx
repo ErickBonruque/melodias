@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { scaleLabel } from '../music/scale'
 import { positionOf } from '../music/time'
 import type { TimeSignature } from '../music/types'
-import { getPlayhead, stop, toggleLoop, toggleMetronome, togglePlay } from '../store/commands'
+import { getPlayhead, stop, toggleLoop, toggleMetronome, togglePlay, toggleRecord } from '../store/commands'
 import { useDoc } from '../store/doc'
 import { useLibrary } from '../store/library'
 import { useTransport } from '../store/transport'
@@ -16,6 +16,7 @@ import {
   PauseIcon,
   PlayIcon,
   QuarterNoteIcon,
+  RecordIcon,
   StopIcon,
   SunIcon,
   ToolsPanelIcon,
@@ -138,6 +139,7 @@ export function TransportBar() {
   const key = useDoc((s) => s.melody.key)
   const scale = useDoc((s) => s.melody.scale)
   const playing = useTransport((s) => s.playing)
+  const recording = useTransport((s) => s.recording)
   const loopOn = useTransport((s) => s.loop.on)
   const metronome = useTransport((s) => s.metronome)
   const { theme, libraryOpen, toolsOpen, set } = useView()
@@ -174,6 +176,15 @@ export function TransportBar() {
           onClick={togglePlay}
         >
           {playing ? <PauseIcon /> : <PlayIcon />}
+        </button>
+        <button
+          className={`tool ${recording ? 'recording' : 'text-felt-text'}`}
+          aria-pressed={recording}
+          title={recording ? 'Encerrar a gravação (R)' : 'Gravar o que você tocar (R)'}
+          aria-label={recording ? 'Encerrar a gravação' : 'Gravar'}
+          onClick={toggleRecord}
+        >
+          <RecordIcon />
         </button>
         <button className="tool" aria-pressed={loopOn} title="Loop (C)" aria-label="Loop" onClick={toggleLoop}>
           <LoopIcon />

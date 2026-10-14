@@ -309,6 +309,7 @@ export class PianoRollController {
       gridStep: this.gridStep(),
       playhead,
       playing: t.playing,
+      recording: t.recording,
       loop: t.loop,
       hoverNoteId: this.hoverNoteId,
       hoverKey: this.hoverKey,
@@ -426,7 +427,8 @@ export class PianoRollController {
       return
     }
 
-    if (region !== 'grid') return
+    // gravando, a grade não aceita edição: só o teclado lateral e a rolagem
+    if (region !== 'grid' || useTransport.getState().recording) return
     const tick = c.tickOfX(p.x)
     const pitch = c.pitchOfY(p.y)
     const hit = tick >= 0 ? noteAt(doc.melody.notes, tick, pitch) : undefined

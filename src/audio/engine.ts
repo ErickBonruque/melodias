@@ -12,6 +12,8 @@ export type InstrumentId = (typeof INSTRUMENTS)[number]['id']
 
 type Voice = Tone.Sampler | Tone.PolySynth
 
+export type LiveNoteEvent = { type: 'on' | 'off'; pitch: number; velocity: number }
+
 const PIANO_SAMPLES = ['A0', 'C1', 'D#1', 'F#1', 'A1', 'C2', 'D#2', 'F#2', 'A2', 'C3', 'D#3', 'F#3', 'A3', 'C4', 'D#4', 'F#4', 'A4', 'C5', 'D#5', 'F#5', 'A5', 'C6', 'D#6', 'F#6', 'A6', 'C7', 'D#7', 'F#7', 'A7', 'C8']
 
 function midiToFreq(pitch: number): number {
@@ -35,14 +37,18 @@ class AudioEngine {
   private timeSignature: TimeSignature = [4, 4]
   private bpm = 96
   private loop = { on: false, start: 0, end: 0 }
-  private endTick = PPQ * 4
+  private endTick: number | null = PPQ * 4
   private endEventId: number | null = null
   private metronomeOn = false
   private metronomeId: number | null = null
 
   /** Alturas soando agora por ação ao vivo (mouse, teclado do computador, MIDI). */
   readonly live = new Set<number>()
+  private silent = new Set<number>()
   private liveListeners = new Set<() => void>()
+
+  private noteListeners = new Set<(ev: LiveNoteEvent) => void>()
+  private countIn: { startAt: number; beatSec: number; tick: number } | null = null
 
   /** Chamado quando a reprodução chega ao fim da melodia sozinha. */
   onEnded: (() => void) | null = null
@@ -152,10 +158,14 @@ class AudioEngine {
     else void this.start().then(fn)
   }
 
-  noteOn(pitch: number, velocity = 0.8): void {
+  /** `silent` acende a tecla e avisa quem grava, mas não toca (é o caso da voz captada pelo microfone). */
+  noteOn(pitch: number, velocity = 0.8, silent = false): void {
     if (this.live.has(pitch)) return
     this.live.add(pitch)
+    if (silent) this.silent.add(pitch)
     this.emitLive()
+    for (const l of this.noteListeners) l({ type: 'on', pitch, velocity })
+    if (silent) return
     this.whenStarted(() => {
       if (this.live.has(pitch)) this.currentVoice().triggerAttack(midiToFreq(pitch), Tone.now(), velocity)
     })
@@ -164,7 +174,15 @@ class AudioEngine {
   noteOff(pitch: number): void {
     if (!this.live.delete(pitch)) return
     this.emitLive()
+    for (const l of this.noteListeners) l({ type: 'off', pitch, velocity: 0 })
+    if (this.silent.delete(pitch)) return
     if (this.started) this.currentVoice().triggerRelease(midiToFreq(pitch), Tone.now())
+  }
+
+  /** Avisa de cada nota tocada ao vivo. É por aqui que a gravação escuta. */
+  onNote(listener: (ev: LiveNoteEvent) => void): () => void {
+    this.noteListeners.add(listener)
+    return () => this.noteListeners.delete(listener)
   }
 
   /** Toca uma nota curta, para dar retorno sonoro ao criar ou mover notas. */
@@ -183,10 +201,7 @@ class AudioEngine {
 
   private releaseAll(): void {
     for (const { node } of this.voices.values()) node.releaseAll()
-    if (this.live.size > 0) {
-      this.live.clear()
-      this.emitLive()
-    }
+    for (const pitch of [...this.live]) this.noteOff(pitch)
   }
 
   // ---------------------------------------------------------------- melodia e transport
@@ -209,8 +224,8 @@ class AudioEngine {
     if (this.started) this.rebuildPart()
   }
 
-  /** Tick em que a reprodução para sozinha quando não há loop. */
-  setEnd(tick: number): void {
+  /** Tick em que a reprodução para sozinha quando não há loop. Com null, segue até mandarem parar. */
+  setEnd(tick: number | null): void {
     if (tick === this.endTick) return
     this.endTick = tick
     if (this.started) this.scheduleEnd()
@@ -246,6 +261,8 @@ class AudioEngine {
   private scheduleEnd(): void {
     const transport = Tone.getTransport()
     if (this.endEventId != null) transport.clear(this.endEventId)
+    this.endEventId = null
+    if (this.endTick == null) return
     this.endEventId = transport.schedule(() => {
       if (transport.loop) return
       // deixa o agendamento terminar antes de parar o transport
@@ -276,25 +293,50 @@ class AudioEngine {
     )
   }
 
-  play(fromTick: number): void {
+  /** Toca a partir do tick. Com `countInBeats`, estala esse número de tempos antes de partir. */
+  play(fromTick: number, countInBeats = 0): void {
     this.whenStarted(() => {
       const transport = Tone.getTransport()
       const tick = Math.max(0, Math.round(fromTick))
       // já tocando, é um salto; parado, parte direto do tick pedido
-      if (transport.state === 'started') transport.ticks = tick
-      else transport.start(undefined, `${tick}i`)
+      if (transport.state === 'started') {
+        transport.ticks = tick
+        return
+      }
+      const now = Tone.now()
+      const beatSec = (60 / this.bpm) * (4 / this.timeSignature[1])
+      for (let i = 0; i < countInBeats; i++) {
+        const accent = i % this.timeSignature[0] === 0
+        this.click?.triggerAttackRelease(accent ? 1760 : 1175, 0.03, now + i * beatSec, accent ? 1 : 0.55)
+      }
+      const startAt = now + countInBeats * beatSec
+      this.countIn = countInBeats > 0 ? { startAt, beatSec, tick } : null
+      transport.start(startAt, `${tick}i`)
     })
+  }
+
+  /** Tempos que faltam na contagem de entrada (com fração), ou 0 se não há contagem. */
+  countInBeatsLeft(): number {
+    if (!this.countIn) return 0
+    const left = (this.countIn.startAt - Tone.immediate()) / this.countIn.beatSec
+    if (left <= 0) {
+      this.countIn = null
+      return 0
+    }
+    return left
   }
 
   stop(): void {
     if (!this.started) return
     Tone.getTransport().stop()
+    this.countIn = null
     this.releaseAll()
   }
 
   /** Posição do que está saindo pelas caixas agora, em ticks. */
   position(): number {
     if (!this.started) return 0
+    if (this.countIn && this.countInBeatsLeft() > 0) return this.countIn.tick
     return Math.max(0, Tone.getTransport().getTicksAtTime(Tone.immediate()))
   }
 }

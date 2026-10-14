@@ -155,3 +155,8 @@ export const QuarterNoteIcon = () => (
     <rect x="7.3" y="1" width="1.4" height="15" />
   </svg>
 )
+export const RecordIcon = () => (
+  <Icon fill>
+    <circle cx="12" cy="12" r="6.5" />
+  </Icon>
+)
