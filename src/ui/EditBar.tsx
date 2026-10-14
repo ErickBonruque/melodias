@@ -6,7 +6,7 @@ import { useView } from '../store/view'
 import { GridSnapIcon, MinusIcon, PencilIcon, PlusIcon, PointerIcon, RedoIcon, ScaleSnapIcon, UndoIcon } from './icons'
 
 export function EditBar() {
-  const { tool, grid, snapGrid, snapScale, set } = useView()
+  const { tool, grid, snapGrid, snapScale, scoreOpen, set } = useView()
   const canUndo = useDoc((s) => s.past.length > 0)
   const canRedo = useDoc((s) => s.future.length > 0)
 
@@ -57,6 +57,17 @@ export function EditBar() {
       </button>
       <button className="tool" disabled={!canRedo} title="Refazer (Ctrl+Shift+Z)" aria-label="Refazer" onClick={() => useDoc.getState().redo()}>
         <RedoIcon />
+      </button>
+
+      <div className="divider" />
+
+      <button
+        className="tool px-2.5 text-[13px] font-medium"
+        aria-pressed={scoreOpen}
+        title="Mostrar a melodia em partitura, embaixo do piano roll"
+        onClick={() => set({ scoreOpen: !scoreOpen })}
+      >
+        Partitura
       </button>
 
       <div className="ml-auto flex items-center gap-1 text-[13px] text-ink-dim">

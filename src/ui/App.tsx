@@ -11,6 +11,7 @@ import { AudioNotice } from './AudioNotice'
 import { EditBar } from './EditBar'
 import { LibraryPanel } from './LibraryPanel'
 import { PianoRoll } from './pianoroll/PianoRoll'
+import { ScorePanel } from './ScorePanel'
 import { ShortcutsDialog } from './ShortcutsDialog'
 import { installShortcuts } from './shortcuts'
 import { ToolsPanel } from './ToolsPanel'
@@ -50,6 +51,7 @@ export function App() {
         <main className="flex min-w-0 flex-1 flex-col">
           <EditBar />
           <PianoRoll />
+          <ScorePanel />
         </main>
         <ToolsPanel />
       </div>

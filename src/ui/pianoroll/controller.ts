@@ -14,6 +14,7 @@ import {
 } from '../../music/notes'
 import {
   degreeLabel,
+  degreeOf,
   getScale,
   isInScale,
   pitchLabel,
@@ -22,6 +23,7 @@ import {
   snapToScale,
   type ScaleInfo,
 } from '../../music/scale'
+import { intervalLabel, intervalShort, previousNotes } from '../../music/analysis'
 import { GRID_TICKS, snapTick, ticksPerBar } from '../../music/time'
 import type { Note } from '../../music/types'
 import { getPlayhead, seek } from '../../store/commands'
@@ -100,6 +102,7 @@ export class PianoRollController {
   private flashes = new Map<string, number>()
   private lastPlayhead = 0
   private cleanup: (() => void)[] = []
+  private labelCache: { notes: Note[]; mode: string; scale: ScaleInfo; labels: Map<string, string> } | null = null
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -308,10 +311,28 @@ export class PianoRollController {
       }
     }
 
+    const scale = this.scale()
+    const mode = useView.getState().noteLabel
+    if (mode === 'name') {
+      this.labelCache = null
+    } else if (!this.labelCache || this.labelCache.notes !== melody.notes || this.labelCache.mode !== mode || this.labelCache.scale !== scale) {
+      const labels = new Map<string, string>()
+      const prev = mode === 'interval' ? previousNotes(melody.notes) : null
+      for (const n of melody.notes) {
+        if (prev) {
+          const before = prev.get(n.id)
+          if (before) labels.set(n.id, intervalShort(n.pitch - before.pitch))
+        } else {
+          labels.set(n.id, String(degreeOf(n.pitch, scale) ?? '×'))
+        }
+      }
+      this.labelCache = { notes: melody.notes, mode, scale, labels }
+    }
+
     const scene: Scene = {
       notes: melody.notes,
       selection: new Set(selection),
-      scale: this.scale(),
+      scale,
       timeSignature: melody.timeSignature,
       gridStep: this.gridStep(),
       playhead,
@@ -323,6 +344,7 @@ export class PianoRollController {
       ghost: this.ghost,
       rect: this.rect,
       lit,
+      labels: this.labelCache?.labels ?? null,
       flashes,
       contentTicks: this.contentTicks(),
     }
@@ -831,9 +853,11 @@ export class PianoRollController {
 
   private showTooltip(note: Note, p: Pointer): void {
     const scale = this.scale()
-    const text = `${pitchLabel(note.pitch, scale)}, ${degreeLabel(note.pitch, scale)}`
+    let text = `${pitchLabel(note.pitch, scale)}, ${degreeLabel(note.pitch, scale)}`
+    const before = previousNotes(useDoc.getState().melody.notes).get(note.id)
+    if (before) text += `. ${intervalLabel(note.pitch - before.pitch)}${note.pitch === before.pitch ? ' que' : ' de'} ${pitchLabel(before.pitch, scale)}`
     if (this.tooltip.textContent !== text) this.tooltip.textContent = text
-    const x = Math.min(this.width - 150, p.x + 14)
+    const x = Math.min(this.width - this.tooltip.offsetWidth - 8, p.x + 14)
     const y = Math.min(this.height - 34, p.y + 18)
     this.tooltip.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`
     this.tooltip.style.opacity = '1'

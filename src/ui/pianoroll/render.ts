@@ -25,6 +25,8 @@ export type Scene = {
   lit: ReadonlySet<number>
   /** Notas que acabaram de disparar, com intensidade de 1 (agora) a 0. */
   flashes: ReadonlyMap<string, number>
+  /** Texto de cada nota quando o rótulo não é o nome (grau ou intervalo). */
+  labels: ReadonlyMap<string, string> | null
   /** Largura total rolável, em ticks. */
   contentTicks: number
 }
@@ -165,9 +167,9 @@ function drawGrid(ctx: CanvasRenderingContext2D, c: Coords, s: Scene, pal: Palet
       ctx.stroke()
     }
 
-    if (w >= 30 && c.rowH >= 14) {
-      const label = pitchLabel(n.pitch, s.scale)
-      if (ctx.measureText(label).width <= w - 9) {
+    if (w >= 14 && c.rowH >= 14) {
+      const label = s.labels ? (s.labels.get(n.id) ?? '') : pitchLabel(n.pitch, s.scale)
+      if (label && ctx.measureText(label).width <= w - 8) {
         ctx.fillStyle = pal.noteInk
         ctx.globalAlpha = 0.85
         ctx.fillText(label, x + 5, y + h / 2 + 0.5)

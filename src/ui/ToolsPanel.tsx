@@ -1,12 +1,14 @@
 import type { ReactNode } from 'react'
 import { useView, type ToolsTab } from '../store/view'
 import { CreateTab } from './tools/CreateTab'
+import { HarmonyTab } from './tools/HarmonyTab'
 import { NotesTab } from './tools/NotesTab'
 import { SoundTab } from './tools/SoundTab'
 
 const TABS: { id: ToolsTab; label: string; render: () => ReactNode }[] = [
   { id: 'notes', label: 'Notas', render: () => <NotesTab /> },
   { id: 'create', label: 'Criar', render: () => <CreateTab /> },
+  { id: 'harmony', label: 'Harmonia', render: () => <HarmonyTab /> },
   { id: 'sound', label: 'Som', render: () => <SoundTab /> },
 ]
 

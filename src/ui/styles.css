@@ -291,6 +291,21 @@
   }
 }
 
+/* Partitura (abcjs): herda a cor do texto e acende a nota que está tocando. */
+.score svg {
+  display: block;
+  color: var(--ink);
+}
+.score .abcjs-note,
+.score .abcjs-rest {
+  cursor: pointer;
+}
+.score .score-on,
+.score .score-on path {
+  fill: var(--bronze);
+  stroke: var(--bronze);
+}
+
 @keyframes rec-pulse {
   50% {
     box-shadow: 0 0 0 5px color-mix(in srgb, var(--felt) 30%, transparent);

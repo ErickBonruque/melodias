@@ -5,6 +5,7 @@ import { PPQ, type GridValue } from '../music/types'
 
 export type Tool = 'pencil' | 'select'
 export type Theme = 'dark' | 'light'
+export type NoteLabel = 'name' | 'degree' | 'interval'
 export type ToolsTab = 'notes' | 'create' | 'harmony' | 'sound'
 
 export const ZOOM_X = { min: 24, max: 480, default: 96 } // pixels por semínima
@@ -33,6 +34,9 @@ type ViewState = {
   toolsOpen: boolean
   toolsTab: ToolsTab
   helpOpen: boolean
+  scoreOpen: boolean
+  /** O que vai escrito dentro de cada nota do piano roll. */
+  noteLabel: NoteLabel
   set: (patch: Partial<Omit<ViewState, 'set'>>) => void
 }
 
@@ -56,6 +60,8 @@ export const useView = create<ViewState>()(
       toolsOpen: true,
       toolsTab: 'notes',
       helpOpen: false,
+      scoreOpen: false,
+      noteLabel: 'name',
       set: (patch) => set(patch),
     }),
     {
